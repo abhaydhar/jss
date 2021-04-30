@@ -9,7 +9,13 @@ import { trackingService } from 'lib/tracking-service-factory';
 const NotFound = (): JSX.Element => {
   if (!isServer() && areQueryParamsReady()) {
     trackingService
-      .trackPage({ url: location.pathname + location.search }, { sc_trk: 'Page not found' })
+      .trackPage(
+        {
+          url: location.pathname + location.search,
+          referrer: trackingService.getReferrer(),
+        },
+        { sc_trk: 'Page not found' }
+      )
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .catch((error: any) => console.error('Tracking failed: ' + error.message));
   }

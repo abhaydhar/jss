@@ -22,7 +22,7 @@ describe('TrackingService', () => {
 
     (global as any).window = {
       location: { pathname: '/page', search: '' },
-      document: { cookie: '' },
+      document: { cookie: '', referrer: '' },
     };
   });
 
@@ -56,6 +56,7 @@ describe('TrackingService', () => {
 
         window.location.search = queryString;
         window.location.pathname = '/page';
+        (window.document as any).referrer = 'https://another.site/some';
 
         const service = new TrackingService({
           apiKey: 'MyKey',
@@ -75,6 +76,7 @@ describe('TrackingService', () => {
 
           const body = JSON.parse(post.data);
           expect(body.url).to.equal('/page' + queryString);
+          expect(body.referrer).to.equal('https://another.site/some');
           expect(body.itemId).to.equal('itemId');
           expect(body.layoutDeviceId).to.equal('deviceId');
           expect(body.language).to.equal('ja-JP');
@@ -457,6 +459,49 @@ describe('TrackingService', () => {
         // assert
         expect(cookie).to.deep.equal(expectedResult);
       });
+    });
+  });
+
+  describe('getReferrer', () => {
+    it('should return external page referrer', () => {
+      // arrange
+      (window.location as any).origin = 'http://my.site';
+      (window.document as any).referrer = 'http://another.site/some';
+
+      const service = new TrackingService({});
+
+      // act
+      const referrer = service.getReferrer();
+
+      // assert
+      expect(referrer).to.equal('http://another.site/some');
+    });
+
+    it('should not return self as a referrer', () => {
+      // arrange
+      (window.location as any).origin = 'http://my.site';
+      (window.document as any).referrer = 'http://my.site/some';
+
+      const service = new TrackingService({});
+
+      // act
+      const referrer = service.getReferrer();
+
+      // assert
+      expect(referrer).to.be.null;
+    });
+
+    it('should return null in SSR mode', () => {
+      // arrange
+      (window as any).document = null;
+
+      const service = new TrackingService({});
+
+      // act
+      const referrer = service.getReferrer();
+
+      // assert
+      expect(referrer).to.be.null;
     });
   });
 

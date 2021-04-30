@@ -105,6 +105,7 @@ export class TrackingService {
 
     const event = {
       url: window.location.pathname + window.location.search,
+      referrer: this.getReferrer() ?? undefined,
       itemId: route?.itemId,
       language: route?.itemLanguage,
       layoutDeviceId: route?.deviceId,
@@ -124,6 +125,14 @@ export class TrackingService {
     debugLog('tracking page: %O %O', event, querystringParams);
 
     return this.fetchData(event, querystringParams);
+  }
+
+  public getReferrer(): string | null {
+    if (isServer()) return null;
+
+    return window.document.referrer.indexOf(window.location.origin) !== 0
+      ? window.document.referrer
+      : null;
   }
 
   private getCurrentPageParams(siteName?: string): { [key: string]: string } {

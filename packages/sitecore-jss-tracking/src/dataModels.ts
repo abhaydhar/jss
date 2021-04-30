@@ -40,6 +40,9 @@ export interface PageViewData {
   /** URL of page to track - should be absolute route path but can accept any value */
   url: string;
 
+  /** URL of the page that loaded the trackable page */
+  referrer?: string;
+
   /** GUID of Sitecore item to track (i.e. context item ID) */
   itemId?: string;
 
