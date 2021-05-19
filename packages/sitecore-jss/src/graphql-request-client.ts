@@ -1,6 +1,7 @@
 import { GraphQLClient, ClientError } from 'graphql-request';
 import { DocumentNode } from 'graphql';
 import debuggers, { Debugger } from './debug';
+import AbortController from "abort-controller";
 
 export type GraphQLRequestClientConfig = {
   /**
@@ -14,11 +15,10 @@ export type GraphQLRequestClientConfig = {
   /**
    * The request timeout in milliseconds.
    */
-   timeout?: number;
+  timeout?: number;
 };
 
 export class GraphQLRequestClient {
-  private client: GraphQLClient;
   private headers: Record<string, string> = {};
   private debug: Debugger;
   private timeout?: number;
@@ -32,9 +32,9 @@ export class GraphQLRequestClient {
     if (clientConfig.apiKey) {
       this.headers.sc_apikey = clientConfig.apiKey;
     }
-    this.client = new GraphQLClient(endpoint, { headers: this.headers });
-    this.debug = clientConfig.debugger || debuggers.http;
+    this.endpoint = endpoint;
     this.timeout = clientConfig.timeout;
+    this.debug = clientConfig.debugger || debuggers.http;
   }
 
   /**
@@ -46,6 +46,14 @@ export class GraphQLRequestClient {
     query: string | DocumentNode,
     variables?: { [key: string]: unknown }
   ): Promise<T> {
+    const abortController = new AbortController();
+
+    const client = new GraphQLClient(this.endpoint, { headers: this.headers, signal: abortController.signal });
+
+    if (this.timeout) {
+      setTimeout(() => abortController.abort(), this.timeout);
+    }
+
     return new Promise((resolve, reject) => {
       // Note we don't have access to raw request/response with graphql-request
       // (or nice hooks like we have with Axios), but we should log whatever we have.
@@ -56,11 +64,7 @@ export class GraphQLRequestClient {
         variables,
       });
 
-      if (this.timeout) {
-        setTimeout(() => reject(`timeout of ${this.timeout}ms exceeded`), this.timeout);
-      }
-
-      this.client
+      client
         .request(query, variables)
         .then((data: T) => {
           this.debug('response: %o', data);
